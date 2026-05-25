@@ -1,8 +1,11 @@
-from transformers import pipeline
 import os
+os.environ["USE_TF"] = "0"
+os.environ["USE_TORCH"] = "1"
+
+from transformers import pipeline
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "finbert")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "FinbertConfiguration")
 
 classifier = pipeline(
     "sentiment-analysis",
