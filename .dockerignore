@@ -1,0 +1,6 @@
+echo __pycache__ > .dockerignore
+echo *.pyc >> .dockerignore
+echo .git >> .dockerignore
+echo .venv >> .dockerignore
+echo models/ >> .dockerignore
+echo data/ >> .dockerignore
