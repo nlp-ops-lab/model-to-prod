@@ -3,3 +3,5 @@ uvicorn
 transformers
 torch
 prefect
+pandas
+scikit-learn
