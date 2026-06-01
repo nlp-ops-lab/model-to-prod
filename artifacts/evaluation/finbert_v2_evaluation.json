@@ -1,0 +1,34 @@
+{
+    "version_name": "finbert_v2",
+    "model_path": "L:\\programming\\model-to-prod\\models\\finbert_v2",
+    "test_file": "L:\\programming\\model-to-prod\\data\\test\\test.csv",
+    "test_samples": 345,
+    "metrics": {
+        "accuracy": 0.927536231884058,
+        "precision": 0.9288762936681207,
+        "recall": 0.927536231884058,
+        "f1": 0.9277834859211486
+    },
+    "confusion_matrix": [
+        [
+            36,
+            3,
+            3
+        ],
+        [
+            2,
+            202,
+            10
+        ],
+        [
+            1,
+            6,
+            82
+        ]
+    ],
+    "labels": {
+        "0": "negative",
+        "1": "neutral",
+        "2": "positive"
+    }
+}
