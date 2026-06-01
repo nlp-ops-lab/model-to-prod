@@ -96,6 +96,6 @@ This enables comparing different runs and promoting models from *candidate* → 
 
 ## 👥 Team
 
-Developed as a collaborative MLOps exercise by a 4-person team, focusing on real-world practices in reproducible ML, data-centric AI, and production-ready NLP.
+Developed as a collaborative MLOps exercise by a 3-person team, focusing on real-world practices in reproducible ML, data-centric AI, and production-ready NLP.
 
 ```
