@@ -5,3 +5,4 @@ torch
 prefect
 pandas
 scikit-learn
+mlflow
