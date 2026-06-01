@@ -10,17 +10,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-data/
 models/
 !data/.gitkeep
 !models/.gitkeep
 
-# دیتابیس‌های لوکال (اگر دارید)
 *.sqlite3
 *.db
 /venv
 .venv
-# خروجی‌های MLflow یا فایل‌های کانفیگ خاص
+
 mlruns/
 .ipynb_checkpoints/
 /models
