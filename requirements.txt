@@ -6,3 +6,4 @@ prefect
 pandas
 scikit-learn
 mlflow
+accelerate
