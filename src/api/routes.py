@@ -1,8 +1,10 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from src.pipelines.sentiment_flow import sentiment_pipeline
-
+from src.services.finbert_service import (
+    predict_sentiment,
+    get_current_model_info,
+)
 
 router = APIRouter()
 
@@ -13,12 +15,17 @@ class SentimentRequest(BaseModel):
 
 @router.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "model": get_current_model_info(),
+    }
+
+
+@router.get("/model-info")
+def model_info():
+    return get_current_model_info()
 
 
 @router.post("/predict")
 def predict(request: SentimentRequest):
-
-    result = sentiment_pipeline(request.text)
-
-    return result
+    return predict_sentiment(request.text)

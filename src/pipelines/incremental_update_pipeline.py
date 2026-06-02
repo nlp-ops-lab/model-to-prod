@@ -6,7 +6,7 @@ from prefect import flow, task
 from src.pipelines.train_finetune import fine_tune_model
 from src.pipelines.evaluate import evaluate_model
 from src.pipelines.mlflow_tracking import log_model_to_mlflow
-
+from src.pipelines.model_registry import promote_model_to_production
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 TEST_FILE = "data/test/test.csv"
@@ -44,6 +44,9 @@ def mlflow_incremental_task(version_name, output_model):
         evaluation_file=evaluation_file,
     )
 
+@task
+def promote_incremental_task(output_model):
+    promote_model_to_production(output_model)
 
 @flow(name="incremental-stateful-update-pipeline")
 def incremental_update_pipeline(
@@ -68,7 +71,8 @@ def incremental_update_pipeline(
         version_name,
         output_model,
     )
-
+    
+    promote_incremental_task(output_model)
 
 def parse_args():
     parser = argparse.ArgumentParser()

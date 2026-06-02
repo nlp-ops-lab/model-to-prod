@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from prefect import flow, task
-
+from src.pipelines.model_registry import promote_model_to_production
 from src.pipelines.train_finetune import fine_tune_model
 from src.pipelines.evaluate import evaluate_model
 from src.pipelines.mlflow_tracking import log_model_to_mlflow
@@ -40,6 +40,9 @@ def mlflow_task(version_name, model_path, evaluation_file):
         evaluation_file=evaluation_file,
     )
 
+@task
+def promote_task(model_path):
+    promote_model_to_production(model_path)
 
 @flow(name="week2-stateful-finetuning-pipeline")
 def week2_training_pipeline():
@@ -91,6 +94,7 @@ def week2_training_pipeline():
             item["output_model"],
             f"artifacts/evaluation/{item['version_name']}_evaluation.json",
         )
+        promote_task(item["output_model"])
 
 
 if __name__ == "__main__":

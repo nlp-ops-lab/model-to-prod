@@ -10,9 +10,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-models/
-!data/.gitkeep
+models/*
 !models/.gitkeep
+!models/production_model.txt
 
 *.sqlite3
 *.db
@@ -21,4 +21,3 @@ models/
 
 mlruns/
 .ipynb_checkpoints/
-/models
