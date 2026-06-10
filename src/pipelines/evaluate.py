@@ -3,11 +3,11 @@ import json
 import os
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from optimum.onnxruntime import ORTModelForSequenceClassification
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_recall_fscore_support
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 
 os.environ["USE_TF"] = "0"
@@ -15,6 +15,7 @@ os.environ["USE_TORCH"] = "1"
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+QUANTIZED_ONNX_FILE = "model_quantized.onnx"
 
 LABEL2ID = {
     "negative": 0,
@@ -66,13 +67,57 @@ def predict(model, tokenizer, texts, batch_size=16):
     return predictions
 
 
-def evaluate_model(model_path: Path, test_file: Path, version_name: str):
-    texts, true_labels = load_test_data(test_file)
+def _prediction_label_to_id(label: str) -> int:
+    normalized = label.strip().lower()
+    if normalized in LABEL2ID:
+        return LABEL2ID[normalized]
+    if normalized.startswith("label_"):
+        return int(normalized.split("_", maxsplit=1)[1])
+    if normalized.isdigit():
+        return int(normalized)
+    raise ValueError(f"Unsupported prediction label: {label}")
+
+
+def predict_quantized(model_path: Path, texts: list[str], batch_size=16):
+    quantized_onnx_path = model_path / QUANTIZED_ONNX_FILE
+    if not quantized_onnx_path.exists():
+        raise FileNotFoundError(f"Quantized ONNX file not found: {quantized_onnx_path}")
 
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    model = ORTModelForSequenceClassification.from_pretrained(
+        str(model_path),
+        file_name=QUANTIZED_ONNX_FILE,
+        provider="CPUExecutionProvider",
+    )
+    classifier = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
-    predicted_labels = predict(model, tokenizer, texts)
+    predictions = []
+    for i in range(0, len(texts), batch_size):
+        batch_texts = texts[i:i + batch_size]
+        batch_predictions = classifier(batch_texts, batch_size=batch_size)
+        predictions.extend(
+            _prediction_label_to_id(prediction["label"])
+            for prediction in batch_predictions
+        )
+
+    return predictions
+
+
+def evaluate_model(
+    model_path: Path,
+    test_file: Path,
+    version_name: str,
+    use_quantized: bool = False,
+    batch_size: int = 16,
+) -> Path:
+    texts, true_labels = load_test_data(test_file)
+
+    if use_quantized:
+        predicted_labels = predict_quantized(model_path, texts, batch_size=batch_size)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        predicted_labels = predict(model, tokenizer, texts, batch_size=batch_size)
 
     accuracy = accuracy_score(true_labels, predicted_labels)
 
@@ -90,6 +135,7 @@ def evaluate_model(model_path: Path, test_file: Path, version_name: str):
         "model_path": str(model_path),
         "test_file": str(test_file),
         "test_samples": len(true_labels),
+        "model_type": "quantized" if use_quantized else "standard",
         "metrics": {
             "accuracy": float(accuracy),
             "precision": float(precision),
@@ -111,6 +157,7 @@ def evaluate_model(model_path: Path, test_file: Path, version_name: str):
     print("Evaluation completed.")
     print(json.dumps(report, ensure_ascii=False, indent=4))
     print(f"Evaluation report saved to: {output_file}")
+    return output_file
 
 
 def parse_args():
@@ -119,6 +166,8 @@ def parse_args():
     parser.add_argument("--model_path", required=True)
     parser.add_argument("--test_file", required=True)
     parser.add_argument("--version_name", required=True)
+    parser.add_argument("--use_quantized", action="store_true")
+    parser.add_argument("--batch_size", type=int, default=16)
 
     return parser.parse_args()
 
@@ -130,4 +179,6 @@ if __name__ == "__main__":
         model_path=BASE_DIR / args.model_path,
         test_file=BASE_DIR / args.test_file,
         version_name=args.version_name,
+        use_quantized=args.use_quantized,
+        batch_size=args.batch_size,
     )
