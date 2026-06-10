@@ -2,6 +2,7 @@ fastapi
 uvicorn
 transformers
 torch
+optimum[onnxruntime]
 prefect
 pandas
 scikit-learn
