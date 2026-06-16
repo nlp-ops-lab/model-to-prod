@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
 
 from src.services.finbert_service import (
+    are_models_ready,
     get_current_model_info,
     predict_batch,
     predict_quantized_sentiment,
@@ -11,6 +14,7 @@ from src.services.finbert_service import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SentimentRequest(BaseModel):
@@ -18,22 +22,40 @@ class SentimentRequest(BaseModel):
 
 
 def _raise_prediction_error(exc: Exception) -> None:
-    if isinstance(exc, FileNotFoundError):
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    raise HTTPException(status_code=500, detail=str(exc)) from exc
+    logger.exception("Inference request failed: %s", exc)
+    status_code = 503 if isinstance(exc, (FileNotFoundError, RuntimeError)) else 500
+    raise HTTPException(
+        status_code=status_code,
+        detail={
+            "status": "error",
+            "error": type(exc).__name__,
+            "message": str(exc),
+        },
+    ) from exc
 
 
 @router.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "model": get_current_model_info(),
-    }
+    try:
+        return {
+            "status": "ok",
+            "model": get_current_model_info(),
+        }
+    except Exception as exc:
+        _raise_prediction_error(exc)
+
+
+@router.get("/ready")
+def ready():
+    return {"status": "ready" if are_models_ready() else "not_ready"}
 
 
 @router.get("/model-info")
 def model_info():
-    return get_current_model_info()
+    try:
+        return get_current_model_info()
+    except Exception as exc:
+        _raise_prediction_error(exc)
 
 
 @router.post("/predict")

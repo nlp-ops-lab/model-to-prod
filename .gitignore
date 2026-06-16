@@ -13,6 +13,7 @@ __pycache__/
 models/*
 !models/.gitkeep
 !models/production_model.txt
+!models/quantized_model.txt
 
 *.sqlite3
 *.db
@@ -21,3 +22,12 @@ models/*
 
 mlruns/
 .ipynb_checkpoints/
+
+.dvc/cache
+
+
+# Ignore everything inside artifacts
+artifacts/*
+!artifacts/evaluation/
+!artifacts/evaluation/**
+!artifacts/data_report.json
