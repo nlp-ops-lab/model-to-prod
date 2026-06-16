@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
 
+from src.services.feedback_service import record_feedback
 from src.services.finbert_service import (
     are_models_ready,
     get_current_model_info,
@@ -21,11 +22,29 @@ class SentimentRequest(BaseModel):
     text: str
 
 
+class FeedbackRequest(BaseModel):
+    text: str
+    predicted_label: str
+    true_label: str
+
+
 def _raise_prediction_error(exc: Exception) -> None:
     logger.exception("Inference request failed: %s", exc)
     status_code = 503 if isinstance(exc, (FileNotFoundError, RuntimeError)) else 500
     raise HTTPException(
         status_code=status_code,
+        detail={
+            "status": "error",
+            "error": type(exc).__name__,
+            "message": str(exc),
+        },
+    ) from exc
+
+
+def _raise_feedback_error(exc: Exception) -> None:
+    logger.exception("Feedback request failed: %s", exc)
+    raise HTTPException(
+        status_code=500,
         detail={
             "status": "error",
             "error": type(exc).__name__,
@@ -83,3 +102,19 @@ def predict_batch_route(
         return predict_batch(sentences, use_quantized=use_quantized)
     except Exception as exc:
         _raise_prediction_error(exc)
+
+
+@router.post("/feedback")
+def feedback(request: FeedbackRequest):
+    try:
+        record_feedback(
+            text=request.text,
+            predicted_label=request.predicted_label,
+            true_label=request.true_label,
+        )
+        return {
+            "status": "success",
+            "message": "feedback recorded",
+        }
+    except Exception as exc:
+        _raise_feedback_error(exc)
