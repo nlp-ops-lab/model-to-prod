@@ -32,6 +32,7 @@ DEFAULT_STANDARD_MODEL_PATH = MODELS_DIR / "FinbertConfiguration"
 QUANTIZED_ONNX_FILE = "model_quantized.onnx"
 USE_MLFLOW_LATEST_ENV = "FINBERT_USE_MLFLOW_LATEST"
 WARMUP_TEXT = "Warmup text for FinBERT inference."
+FALLBACK_MODEL_PATH = DEFAULT_STANDARD_MODEL_PATH
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,20 @@ class PipelineCache:
     source: str
     version_name: str | None
     use_quantized: bool
+
+
+class DummySentimentClassifier:
+    def __call__(self, payload: str | list[str]) -> list[dict[str, float | str]]:
+        if isinstance(payload, str):
+            return [self._predict_one(payload)]
+        return [self._predict_one(text) for text in payload]
+
+    @staticmethod
+    def _predict_one(_: str) -> dict[str, float | str]:
+        return {
+            "label": "neutral",
+            "score": 1.0,
+        }
 
 
 _standard_pipeline_cache: PipelineCache | None = None
@@ -192,6 +207,10 @@ def _should_use_mlflow(prefer_mlflow: bool | None) -> bool:
     return _is_truthy(env_value)
 
 
+def _is_ci_environment() -> bool:
+    return _is_truthy(os.getenv("CI"))
+
+
 def _get_pointer_model_reference(use_quantized: bool) -> ModelReference:
     pointer_file = QUANTIZED_MODEL_FILE if use_quantized else PRODUCTION_MODEL_FILE
     model_path = _ensure_model_directory(_read_pointer_file(pointer_file))
@@ -312,14 +331,78 @@ def _warmup_classifier(classifier: Any, use_quantized: bool) -> None:
     )
 
 
+def _build_dummy_pipeline_cache(use_quantized: bool) -> PipelineCache:
+    logger.warning(
+        "No production model found. Falling back to dummy neutral classifier for %s model.",
+        _model_label(use_quantized),
+    )
+    classifier = DummySentimentClassifier()
+    _warmup_classifier(classifier, use_quantized=use_quantized)
+    return PipelineCache(
+        classifier=classifier,
+        model_path=FALLBACK_MODEL_PATH,
+        cache_key=f"dummy_fallback:{_model_label(use_quantized)}",
+        source="dummy_fallback",
+        version_name="dummy_neutral",
+        use_quantized=use_quantized,
+    )
+
+
+def _build_ci_safe_fallback_cache(
+    use_quantized: bool,
+    resolution_error: Exception,
+) -> PipelineCache:
+    logger.warning(
+        "No production model found for %s model. Falling back to base FinBERT model for CI safety. Reason: %s",
+        _model_label(use_quantized),
+        resolution_error,
+    )
+
+    if FALLBACK_MODEL_PATH.exists():
+        try:
+            load_start = perf_counter()
+            classifier = _load_standard_classifier(FALLBACK_MODEL_PATH)
+            logger.info(
+                "Loaded %s fallback model from %s in %.3fs",
+                _model_label(use_quantized),
+                FALLBACK_MODEL_PATH,
+                perf_counter() - load_start,
+            )
+            _warmup_classifier(classifier, use_quantized=use_quantized)
+            return PipelineCache(
+                classifier=classifier,
+                model_path=FALLBACK_MODEL_PATH,
+                cache_key=f"base_fallback:{_model_label(use_quantized)}",
+                source="base_model_fallback",
+                version_name=FALLBACK_MODEL_PATH.name,
+                use_quantized=use_quantized,
+            )
+        except Exception as fallback_exc:
+            logger.warning(
+                "Failed to load base FinBERT fallback model for %s model: %s",
+                _model_label(use_quantized),
+                fallback_exc,
+            )
+
+    return _build_dummy_pipeline_cache(use_quantized)
+
+
 def _build_pipeline_cache(
     use_quantized: bool,
     prefer_mlflow: bool | None = None,
 ) -> PipelineCache:
-    reference = _resolve_model_reference(
-        use_quantized=use_quantized,
-        prefer_mlflow=prefer_mlflow,
-    )
+    try:
+        reference = _resolve_model_reference(
+            use_quantized=use_quantized,
+            prefer_mlflow=prefer_mlflow,
+        )
+    except RuntimeError as exc:
+        if not _is_ci_environment():
+            raise
+        return _build_ci_safe_fallback_cache(
+            use_quantized=use_quantized,
+            resolution_error=exc,
+        )
     model_path = _materialize_model_path(reference)
 
     load_start = perf_counter()
