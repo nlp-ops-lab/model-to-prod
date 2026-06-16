@@ -28,6 +28,9 @@ mlruns/
 
 # Ignore everything inside artifacts
 artifacts/*
-!artifacts/evaluation/
+!artifacts/evaluation/!artifacts/feedback/
+!artifacts/feedback/**
+!artifacts/feedback/
+!artifacts/feedback/**
 !artifacts/evaluation/**
 !artifacts/data_report.json
