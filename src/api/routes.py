@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from time import perf_counter
 
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from src.services.finbert_service import (
     predict_quantized_sentiment,
     predict_sentiment,
 )
+from src.services.monitoring_service import get_metrics, record_request_latency
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -53,6 +55,14 @@ def _raise_feedback_error(exc: Exception) -> None:
     ) from exc
 
 
+def _run_monitored_request(handler):
+    start = perf_counter()
+    try:
+        return handler()
+    finally:
+        record_request_latency(perf_counter() - start)
+
+
 @router.get("/health")
 def health():
     try:
@@ -77,10 +87,15 @@ def model_info():
         _raise_prediction_error(exc)
 
 
+@router.get("/metrics")
+def metrics():
+    return get_metrics()
+
+
 @router.post("/predict")
 def predict(request: SentimentRequest):
     try:
-        return predict_sentiment(request.text)
+        return _run_monitored_request(lambda: predict_sentiment(request.text))
     except Exception as exc:
         _raise_prediction_error(exc)
 
@@ -88,7 +103,7 @@ def predict(request: SentimentRequest):
 @router.post("/predict-quantized")
 def predict_quantized(request: SentimentRequest):
     try:
-        return predict_quantized_sentiment(request.text)
+        return _run_monitored_request(lambda: predict_quantized_sentiment(request.text))
     except Exception as exc:
         _raise_prediction_error(exc)
 
@@ -99,7 +114,9 @@ def predict_batch_route(
     use_quantized: bool = Query(False, description="Use the quantized model for inference."),
 ):
     try:
-        return predict_batch(sentences, use_quantized=use_quantized)
+        return _run_monitored_request(
+            lambda: predict_batch(sentences, use_quantized=use_quantized)
+        )
     except Exception as exc:
         _raise_prediction_error(exc)
 
