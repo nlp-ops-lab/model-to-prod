@@ -46,12 +46,13 @@ def record_feedback(
 
 
 def load_feedback_data() -> list[dict[str, Any]]:
-    if not FEEDBACK_FILE.exists():
-        return []
+    with _feedback_write_lock:
+        if not FEEDBACK_FILE.exists():
+            return []
 
-    with FEEDBACK_FILE.open("r", encoding="utf-8") as file:
-        return [
-            json.loads(line)
-            for line in file
-            if line.strip()
-        ]
+        with FEEDBACK_FILE.open("r", encoding="utf-8") as file:
+            return [
+                json.loads(line)
+                for line in file
+                if line.strip()
+            ]
