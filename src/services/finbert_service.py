@@ -54,6 +54,7 @@ class PipelineCache:
     source: str
     version_name: str | None
     use_quantized: bool
+    warmed: bool = True
 
 
 class DummySentimentClassifier:
@@ -458,17 +459,27 @@ def get_classifier(use_quantized: bool = False, prefer_mlflow: bool | None = Non
 
 
 def preload_models() -> dict[str, Any]:
-    get_classifier(use_quantized=False)
-    get_classifier(use_quantized=True)
-    return get_current_model_info()
+    return {
+        "status": "ready" if are_models_ready() else "loading",
+        "startup_probe": {
+            "standard": _probe_model_resolution(use_quantized=False),
+            "quantized": _probe_model_resolution(use_quantized=True),
+        },
+        "runtime": get_current_model_info(),
+    }
 
 
 def is_model_ready(use_quantized: bool = False) -> bool:
-    return _get_pipeline_cache(use_quantized) is not None
+    cache = _get_pipeline_cache(use_quantized)
+    return cache is not None and cache.warmed
 
 
 def are_models_ready() -> bool:
     return is_model_ready(use_quantized=False) and is_model_ready(use_quantized=True)
+
+
+def get_readiness_status() -> dict[str, str]:
+    return {"status": "ready" if are_models_ready() else "loading"}
 
 
 def load_latest_model_from_mlflow(use_quantized: bool = False) -> Path:
@@ -530,12 +541,42 @@ def _loaded_model_status(use_quantized: bool) -> dict[str, Any]:
 
     return {
         "loaded": True,
-        "ready": True,
+        "ready": cache.warmed,
+        "warmed": cache.warmed,
         "quantized": use_quantized,
         "source": cache.source,
         "model_path": str(cache.model_path),
         "version_name": cache.version_name,
     }
+
+
+def _probe_model_resolution(
+    use_quantized: bool,
+    prefer_mlflow: bool | None = None,
+) -> dict[str, Any]:
+    try:
+        reference = _resolve_model_reference(
+            use_quantized=use_quantized,
+            prefer_mlflow=prefer_mlflow,
+        )
+        result = {
+            "ready": True,
+            "quantized": use_quantized,
+            "source": reference.source,
+            "version_name": reference.version_name,
+        }
+        if reference.model_path is not None:
+            result["configured_path"] = str(reference.model_path)
+        if reference.mlflow_model is not None:
+            result["run_id"] = reference.mlflow_model.run_id
+            result["experiment_name"] = reference.mlflow_model.experiment_name
+        return result
+    except Exception as exc:
+        return {
+            "ready": False,
+            "quantized": use_quantized,
+            "error": str(exc),
+        }
 
 
 def _pointer_model_status(pointer_file: Path) -> dict[str, Any]:

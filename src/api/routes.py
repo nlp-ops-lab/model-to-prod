@@ -13,6 +13,7 @@ from src.monitoring.monitor import (
 )
 from src.services.finbert_service import (
     get_current_model_info,
+    get_readiness_status,
     predict_batch,
     predict_quantized_sentiment,
     predict_sentiment,
@@ -43,6 +44,11 @@ def health():
         "status": "ok",
         "model": get_current_model_info(),
     }
+
+
+@router.get("/ready")
+def ready():
+    return get_readiness_status()
 
 
 @router.get("/model-info")

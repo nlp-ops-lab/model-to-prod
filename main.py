@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 def startup_preload_models() -> None:
-    logger.info("Starting FinBERT API startup preload")
+    logger.info("Starting FinBERT API startup model probe")
     try:
         preload_models()
     except Exception:
-        logger.exception("FinBERT startup preload failed")
-        raise
-    logger.info("FinBERT startup preload completed successfully")
+        logger.exception("FinBERT startup model probe failed")
+        return
+    logger.info("FinBERT startup model probe completed successfully")
 
 
 app.include_router(router)
