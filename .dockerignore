@@ -1,6 +1,11 @@
-venv/
+.venv/
+models/
+mlruns/
+data/
 .git/
 __pycache__/
-.pytest_cache/
-.dvc/
-models/
+.dvc/cache/
+pip-cache/
+*.db
+*.pyc
+
