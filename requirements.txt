@@ -1,10 +1,14 @@
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
 fastapi
-uvicorn
+uvicorn[standard]
 transformers
 torch
-optimum[onnxruntime]
-prefect
 pandas
 scikit-learn
-mlflow
 accelerate
+optimum[onnxruntime]
+prefect
+mlflow
+
