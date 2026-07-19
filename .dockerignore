@@ -1,0 +1,11 @@
+.venv/
+models/
+mlruns/
+data/
+.git/
+__pycache__/
+.dvc/cache/
+pip-cache/
+*.db
+*.pyc
+

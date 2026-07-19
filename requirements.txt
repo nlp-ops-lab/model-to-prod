@@ -1,0 +1,14 @@
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+fastapi
+uvicorn[standard]
+transformers
+torch
+pandas
+scikit-learn
+accelerate
+optimum[onnxruntime]
+prefect
+mlflow
+

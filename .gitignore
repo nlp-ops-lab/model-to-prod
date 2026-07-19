@@ -10,15 +10,27 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-data/
-models/
-!data/.gitkeep
+models/*
 !models/.gitkeep
+!models/production_model.txt
+!models/quantized_model.txt
 
-# دیتابیس‌های لوکال (اگر دارید)
 *.sqlite3
 *.db
+/venv
+.venv
 
-# خروجی‌های MLflow یا فایل‌های کانفیگ خاص
 mlruns/
 .ipynb_checkpoints/
+
+.dvc/cache
+
+
+# Ignore everything inside artifacts
+artifacts/*
+!artifacts/evaluation/!artifacts/feedback/
+!artifacts/feedback/**
+!artifacts/feedback/
+!artifacts/feedback/**
+!artifacts/evaluation/**
+!artifacts/data_report.json

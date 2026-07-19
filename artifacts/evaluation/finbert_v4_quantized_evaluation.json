@@ -1,0 +1,35 @@
+{
+    "version_name": "finbert_v4_quantized",
+    "model_path": "L:\\programming\\model-to-prod\\models\\finbert_v4_quantized",
+    "test_file": "L:\\programming\\model-to-prod\\data\\test\\test.csv",
+    "test_samples": 345,
+    "model_type": "quantized",
+    "metrics": {
+        "accuracy": 0.9188405797101449,
+        "precision": 0.9256491765684537,
+        "recall": 0.9188405797101449,
+        "f1": 0.9201975225406519
+    },
+    "confusion_matrix": [
+        [
+            36,
+            3,
+            3
+        ],
+        [
+            0,
+            197,
+            17
+        ],
+        [
+            2,
+            3,
+            84
+        ]
+    ],
+    "labels": {
+        "0": "negative",
+        "1": "neutral",
+        "2": "positive"
+    }
+}

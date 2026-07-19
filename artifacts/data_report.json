@@ -1,0 +1,18 @@
+{
+    "dataset_name": "Financial PhraseBank - Sentences_75Agree",
+    "total_samples": 3448,
+    "label_distribution": {
+        "positive": 887,
+        "negative": 420,
+        "neutral": 2141
+    },
+    "duplicate_count": 0,
+    "average_text_length": 124.81380510440836,
+    "max_text_length": 315,
+    "min_text_length": 9,
+    "missing_values": {
+        "text": 0,
+        "label": 0
+    },
+    "invalid_labels": 0
+}
